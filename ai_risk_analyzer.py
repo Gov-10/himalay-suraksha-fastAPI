@@ -9,10 +9,22 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 # --- Post-processing safety net ---
 def post_process_risks(weather_data, ai_output):
     risks = ai_output.get("risks", [])
-    rainfall = weather_data.get("rainfall_24h", 0)
-    snow_depth = weather_data.get("snow_depth", 0)
-    temp = weather_data.get("temperature", 15)
-    windspeed = weather_data.get("windspeed", 0)
+
+    # Convert string inputs (from JQ) to floats safely
+    try:
+        rainfall = float(weather_data.get("rainfall_24h", 0))
+    except (ValueError, TypeError):
+        rainfall = 0.0
+
+    try:
+        temp = float(weather_data.get("temperature", 15))
+    except (ValueError, TypeError):
+        temp = 15.0
+
+    try:
+        windspeed = float(weather_data.get("windspeed", 0))
+    except (ValueError, TypeError):
+        windspeed = 0.0
 
     enforced = []
 
@@ -28,12 +40,6 @@ def post_process_risks(weather_data, ai_output):
             "hazard_type": "flood",
             "risk_level": "MEDIUM" if rainfall < 200 else "HIGH",
             "reason": f"Rainfall {rainfall}mm indicates potential flooding."
-        })
-    if snow_depth > 50 and temp > 5:
-        enforced.append({
-            "hazard_type": "avalanche",
-            "risk_level": "MEDIUM",
-            "reason": f"Snow depth {snow_depth}cm with temp {temp}°C increases avalanche risk."
         })
     if windspeed > 80:
         enforced.append({
